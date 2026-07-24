@@ -1,19 +1,12 @@
+import os
+import sys
 from datetime import date
 
 import pytest
 from pyspark.sql import SparkSession
 from pyspark.sql.types import DateType, DoubleType, IntegerType, StructField, StructType
-import os
-import sys
 
-# @pytest.fixture(scope="session")
-# def spark():
-#   return (
-#       SparkSession.builder
-#       .appName("test-silver")
-#       .master("local[1]")
-#       .getOrCreate()
-#   )
+
 @pytest.fixture(scope="session")
 def spark():
     os.environ["PYSPARK_PYTHON"] = sys.executable
@@ -30,7 +23,7 @@ def spark():
 
     yield session
     session.stop()
-    
+
 @pytest.fixture
 def df_bronze_mock(spark):
   schema = StructType([

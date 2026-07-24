@@ -1,12 +1,14 @@
 import sys
+from collections.abc import Callable
 
 from loguru import logger
 
+from src.transformation.base_processor import BaseProcessor
 from src.transformation.processors.dollar_processor import DollarProcessor
 from src.transformation.processors.ipca_processor import IpcaProcessor
 from src.transformation.processors.selic_processor import SelicProcessor
 
-PROCESSORS = {
+PROCESSORS: dict[str, Callable[[], BaseProcessor]] = {
     "selic": SelicProcessor,
     "dollar": DollarProcessor,
     "ipca": IpcaProcessor,

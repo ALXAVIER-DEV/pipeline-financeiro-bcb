@@ -1,0 +1,37 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+.eggs/
+*.egg-info/
+.clude
+.idea
+.agents
+
+# Env
+.env
+*.env.local
+.venv-1
+# Data
+data/raw/
+data/output/
+data/tmp/
+*.parquet
+*.csv
+!tests/fixtures/*.csv
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.backup
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+#jars
+jars/
+
+data-engineering-template/
+.pytest_cache/
+logs/

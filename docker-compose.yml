@@ -1,0 +1,53 @@
+services:
+  localstack:
+    image: localstack/localstack:3.4
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: us-east-1
+      DATA_DIR: /var/lib/localstack
+      HOSTNAME_EXTERNAL: localhost
+    volumes:
+      - localstack_data:/var/lib/localstack
+
+  create-buckets:
+    image: localstack/localstack:3.4
+    depends_on:
+      - localstack
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LOCALSTACK_HOST: localstack
+    entrypoint: >
+      /bin/sh -c "
+      until awslocal --endpoint-url http://localstack:4566 s3api list-buckets >/dev/null 2>&1; do
+        echo 'Aguardando LocalStack...';
+        sleep 2;
+      done;
+      awslocal --endpoint-url http://localstack:4566 s3 mb s3://financial-lakehouse --region us-east-1 || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key bronze/ || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key silver/ || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key gold/ || true;
+      "
+
+  spark:
+    image: apache/spark:3.5.1
+    environment:
+      SPARK_MODE: master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark:7077
+    depends_on:
+      - spark
+
+volumes:
+  localstack_data:

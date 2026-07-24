@@ -1,10 +1,20 @@
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import (
-    col, lag, round as spark_round,
-    year, month, dayofweek, quarter, when, avg, stddev
+    avg,
+    col,
+    dayofweek,
+    lag,
+    month,
+    quarter,
+    stddev,
+    when,
+    year,
 )
+from pyspark.sql.functions import round as spark_round
 from pyspark.sql.window import Window
+
 from src.transformation.base_processor import BaseProcessor
+
 
 class SelicProcessor(BaseProcessor):
     def __init__(self):
@@ -30,7 +40,7 @@ class SelicProcessor(BaseProcessor):
 
             # variacao diaria
             .withColumn("variacao_pp",
-                        spark_round(col("valor") - lag("valor", 1).over(window_order), 4)
+                        spark_round(col("valor") - lag("valor", 1).over(window_order),4)
             )
 
             # taxa anualizada ( regara de 252 dias uteis )

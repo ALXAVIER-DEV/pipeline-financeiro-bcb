@@ -1,8 +1,10 @@
-from loguru import logger
-from src.transformation.processors.selic_processor import SelicProcessor
-from src.transformation.processors.ipca_processor import IpcaProcessor
-from src.transformation.processors.dollar_processor import DollarProcessor
 import sys
+
+from loguru import logger
+
+from src.transformation.processors.dollar_processor import DollarProcessor
+from src.transformation.processors.ipca_processor import IpcaProcessor
+from src.transformation.processors.selic_processor import SelicProcessor
 
 PROCESSORS = {
     "selic": SelicProcessor,

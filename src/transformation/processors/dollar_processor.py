@@ -1,11 +1,10 @@
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import (
-    col, lag, round as spark_round,
-    year, month, quarter,
-    avg, max as spark_max, min as spark_min,
-when
-)
+from pyspark.sql.functions import avg, col, lag, month, quarter, when, year
+from pyspark.sql.functions import max as spark_max
+from pyspark.sql.functions import min as spark_min
+from pyspark.sql.functions import round as spark_round
 from pyspark.sql.window import Window
+
 from src.transformation.base_processor import BaseProcessor
 
 

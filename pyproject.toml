@@ -34,3 +34,11 @@
   [tool.pytest.ini_options]
   testpaths = ["tests"]
   pythonpath = ["."]
+  
+  [tool.coverage.run]
+   branch = true
+   source = ["src"]
+
+  [tool.coverage.report]
+   show_missing = true
+   fail_under = 80

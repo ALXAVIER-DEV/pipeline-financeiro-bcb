@@ -1,17 +1,36 @@
-import pytest
 from datetime import date
-from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, DateType, DoubleType, IntegerType
 
+import pytest
+from pyspark.sql import SparkSession
+from pyspark.sql.types import DateType, DoubleType, IntegerType, StructField, StructType
+import os
+import sys
+
+# @pytest.fixture(scope="session")
+# def spark():
+#   return (
+#       SparkSession.builder
+#       .appName("test-silver")
+#       .master("local[1]")
+#       .getOrCreate()
+#   )
 @pytest.fixture(scope="session")
 def spark():
-  return (
-      SparkSession.builder
-      .appName("test-silver")
-      .master("local[1]")
-      .getOrCreate()
-  )
+    os.environ["PYSPARK_PYTHON"] = sys.executable
+    os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
+    session = (
+        SparkSession.builder
+        .appName("test-silver")
+        .master("local[1]")
+        .config("spark.pyspark.python", sys.executable)
+        .config("spark.pyspark.driver.python", sys.executable)
+        .getOrCreate()
+    )
+
+    yield session
+    session.stop()
+    
 @pytest.fixture
 def df_bronze_mock(spark):
   schema = StructType([
@@ -29,7 +48,6 @@ def df_bronze_mock(spark):
   return spark.createDataFrame(data, schema)
 
 def test_remove_nulos(spark, df_bronze_mock):
-  from pyspark.sql.functions import lit
   df_com_nulo = df_bronze_mock.union(
       spark.createDataFrame(
           [(date(2024, 1, 9), None, 2024)],
@@ -40,7 +58,7 @@ def test_remove_nulos(spark, df_bronze_mock):
   assert df_filtrado.count() == 5
 
 def test_variacao_calculada(spark, df_bronze_mock):
-  from pyspark.sql.functions import lag, col
+  from pyspark.sql.functions import col, lag
   from pyspark.sql.window import Window
 
   w = Window.orderBy("data")
@@ -51,14 +69,14 @@ def test_variacao_calculada(spark, df_bronze_mock):
   assert df.filter("variacao_pp is null").count() == 1
 
 def test_nivel_taxa_classificado(spark, df_bronze_mock):
-  from pyspark.sql.functions import when, col
+
+  from pyspark.sql.functions import col, when
   df = df_bronze_mock.withColumn(
       "nivel_taxa",
-      when(col("valor") < 6, "baixo")
+    when(col("valor") < 6, "baixo")
       .when(col("valor") < 10, "moderado")
       .when(col("valor") < 14, "alto")
       .otherwise("muito_alto")
   )
-  )
-niveis = [r.nivel_taxa for r in df.select("nivel_taxa").collect()]
-assert all(n == "alto" for n in niveis)
+  niveis = [r.nivel_taxa for r in df.select("nivel_taxa").collect()]
+  assert all(n == "alto" for n in niveis)

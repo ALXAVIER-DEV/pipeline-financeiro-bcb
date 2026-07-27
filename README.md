@@ -111,6 +111,127 @@ dagster dev -f src/orchestration/pipeline.py
 streamlit run src/dashboard/app.py
 ```
 
+### Listar tabelas e consultar os dados
+
+Com o LocalStack ativo e o pipeline já executado, abra uma sessão Python:
+
+```bash
+python
+```
+
+Inicialize o Spark configurado pelo projeto:
+
+```python
+from src.utils.spark_session import get_spark
+
+spark = get_spark("analise-dados")
+```
+
+Liste os namespaces e as tabelas disponíveis:
+
+```python
+spark.sql("SHOW NAMESPACES IN local").show(truncate=False)
+spark.sql("SHOW TABLES IN local.bronze").show(truncate=False)
+spark.sql("SHOW TABLES IN local.silver").show(truncate=False)
+spark.sql("SHOW TABLES IN local.gold").show(truncate=False)
+```
+
+Inspecione a estrutura e os metadados de uma tabela:
+
+```python
+spark.sql("DESCRIBE TABLE local.silver.selic").show(100, truncate=False)
+spark.sql("DESCRIBE TABLE EXTENDED local.silver.selic").show(100, truncate=False)
+```
+
+Consulte amostras das três camadas:
+
+```python
+spark.sql("""
+    SELECT data, valor, _ingested_at, _source
+    FROM local.bronze.selic
+    ORDER BY data DESC
+    LIMIT 20
+""").show(truncate=False)
+
+spark.sql("""
+    SELECT data, valor, variacao_pp, media_movel_30d,
+           volatilidade_30d, nivel_taxa
+    FROM local.silver.selic
+    ORDER BY data DESC
+    LIMIT 20
+""").show(truncate=False)
+
+spark.sql("""
+    SELECT *
+    FROM local.gold.indicadores_macroeconomicos
+    ORDER BY mes_ref DESC
+    LIMIT 20
+""").show(truncate=False)
+```
+
+Analise quantidade, período e qualidade dos dados:
+
+```python
+spark.sql("""
+    SELECT
+        COUNT(*) AS total_registros,
+        MIN(data) AS primeira_data,
+        MAX(data) AS ultima_data,
+        SUM(CASE WHEN valor IS NULL THEN 1 ELSE 0 END) AS valores_nulos
+    FROM local.bronze.selic
+""").show(truncate=False)
+```
+
+Compare as séries por mês:
+
+```python
+spark.sql("""
+    SELECT
+        mes_ref,
+        selic_media_mes,
+        ipca_acumulado_mes,
+        dolar_medio_mes,
+        juros_real_estimado
+    FROM local.gold.indicadores_macroeconomicos
+    ORDER BY mes_ref DESC
+""").show(100, truncate=False)
+```
+
+Analise as classificações calculadas na camada Silver:
+
+```python
+spark.sql("""
+    SELECT nivel_taxa, COUNT(*) AS ocorrencias, AVG(valor) AS taxa_media
+    FROM local.silver.selic
+    GROUP BY nivel_taxa
+    ORDER BY taxa_media
+""").show(truncate=False)
+
+spark.sql("""
+    SELECT pressao, COUNT(*) AS ocorrencias, AVG(valor) AS ipca_medio
+    FROM local.silver.ipca
+    GROUP BY pressao
+    ORDER BY ipca_medio
+""").show(truncate=False)
+
+spark.sql("""
+    SELECT tendencia, COUNT(*) AS ocorrencias, AVG(valor) AS dolar_medio
+    FROM local.silver.dollar
+    GROUP BY tendencia
+    ORDER BY dolar_medio
+""").show(truncate=False)
+```
+
+Encerre a sessão ao terminar:
+
+```python
+spark.stop()
+exit()
+```
+
+Se uma consulta retornar `TABLE_OR_VIEW_NOT_FOUND`, execute primeiro a ingestão
+Bronze, o processamento Silver e o modelo dbt Gold.
+
 ### Testes e qualidade
 
 ```bash
@@ -228,6 +349,67 @@ dagster dev -f src/orchestration/pipeline.py
 # 6. Run the dashboard
 streamlit run src/dashboard/app.py
 ```
+
+### List tables and query the data
+
+With LocalStack running and the pipeline already processed, start Python:
+
+```bash
+python
+```
+
+Initialize the Spark session configured by the project:
+
+```python
+from src.utils.spark_session import get_spark
+
+spark = get_spark("data-analysis")
+```
+
+List namespaces and tables:
+
+```python
+spark.sql("SHOW NAMESPACES IN local").show(truncate=False)
+spark.sql("SHOW TABLES IN local.bronze").show(truncate=False)
+spark.sql("SHOW TABLES IN local.silver").show(truncate=False)
+spark.sql("SHOW TABLES IN local.gold").show(truncate=False)
+```
+
+Inspect schemas and sample data:
+
+```python
+spark.sql("DESCRIBE TABLE local.silver.selic").show(100, truncate=False)
+
+spark.sql("""
+    SELECT *
+    FROM local.gold.indicadores_macroeconomicos
+    ORDER BY mes_ref DESC
+    LIMIT 20
+""").show(truncate=False)
+```
+
+Check row counts, date ranges, and null values:
+
+```python
+spark.sql("""
+    SELECT
+        COUNT(*) AS total_rows,
+        MIN(data) AS first_date,
+        MAX(data) AS last_date,
+        SUM(CASE WHEN valor IS NULL THEN 1 ELSE 0 END) AS null_values
+    FROM local.bronze.selic
+""").show(truncate=False)
+```
+
+Stop Spark when finished:
+
+```python
+spark.stop()
+exit()
+```
+
+If a query returns `TABLE_OR_VIEW_NOT_FOUND`, run the Bronze ingestion, Silver
+processing, and dbt Gold model first.
 
 ### Tests and quality
 

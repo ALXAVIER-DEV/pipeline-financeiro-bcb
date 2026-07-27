@@ -7,7 +7,7 @@ services:
       SERVICES: s3
       DEFAULT_REGION: us-east-1
       DATA_DIR: /var/lib/localstack
-      HOSTNAME_EXTERNAL: localhost
+      HOSTNAME_EXTERNAL: localstack
     volumes:
       - localstack_data:/var/lib/localstack
 
@@ -31,23 +31,106 @@ services:
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key bronze/ || true;
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key silver/ || true;
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key gold/ || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/ || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/bronze/ || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/silver/ || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/gold/ || true;
       "
 
-  spark:
-    image: apache/spark:3.5.1
-    environment:
-      SPARK_MODE: master
-    ports:
-      - "8080:8080"
-      - "7077:7077"
+  spark-master:
+      image: pipeline-financeiro-bcb:spark-local
+      build:
+        context: .
+        dockerfile: Dockerfile
+      command:
+        - spark-class
+        - org.apache.spark.deploy.master.Master
+        - --host
+        - spark-master
+        - --port
+        - "7077"
+        - --webui-port
+        - "8080"
+      environment:
+        SPARK_NO_DAEMONIZE: "true"
+      ports:
+        - "7077:7077"
+        - "8080:8080"
+      healthcheck:
+        test:
+          - CMD
+          - python
+          - -c
+          - "import socket; socket.create_connection(('spark-master', 7077), 5).close()"
+        interval: 10s
+        timeout: 5s
+        retries: 10
+        start_period: 20s
+      restart: unless-stopped
 
   spark-worker:
-    image: apache/spark:3.5.1
+    image: pipeline-financeiro-bcb:spark-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - --cores
+      - "2"
+      - --memory
+      - "2g"
+      - --webui-port
+      - "8081"
+      - spark://spark-master:7077
     environment:
-      SPARK_MODE: worker
-      SPARK_MASTER_URL: spark://spark:7077
+      SPARK_NO_DAEMONIZE: "true"
     depends_on:
-      - spark
+      spark-master:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket; socket.create_connection(('localhost', 8081), 5).close()"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  pipeline:
+    image: pipeline-financeiro-bcb:spark-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - sleep
+      - infinity
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      S3_BUCKET: financial-lakehouse
+      SPARK_WAREHOUSE: s3a://financial-lakehouse/warehouse
+
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_DRIVER_HOST: pipeline
+      SPARK_DRIVER_BIND_ADDRESS: 0.0.0.0
+      SPARK_DRIVER_PORT: "40440"
+      SPARK_BLOCK_MANAGER_PORT: "40441"
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   localstack_data:

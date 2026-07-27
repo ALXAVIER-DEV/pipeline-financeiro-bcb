@@ -39,3 +39,6 @@ if __name__ == "__main__":
     for serie, info in resultado.items():
         status = "✓" if info["status"] in ("ok", "sem_dados") else "✗"
         print(f"{status} {serie}: {info}")
+
+    if any(info["status"] == "erro" for info in resultado.values()):
+        sys.exit(1)

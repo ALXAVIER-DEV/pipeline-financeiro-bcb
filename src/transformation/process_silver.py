@@ -39,3 +39,6 @@ if __name__ == "__main__":
         for k, v in results.items():
             status = "OK" if v == "OK" else "ERRO"
             print(f"{status} {k}: {v}")
+
+        if any(value != "OK" for value in results.values()):
+            sys.exit(1)

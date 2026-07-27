@@ -11,3 +11,4 @@ docs
 tests
 *.pyc
 *.egg-info
+jars/

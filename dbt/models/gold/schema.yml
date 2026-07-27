@@ -1,7 +1,7 @@
 version: 2
 models:
   - name: indicadores_macroeconomicos
-    description: "Indicadores macro consolidados mensalmente -Selic, IPCA, Dolar"
+    description: "Indicadores macro consolidados mensalmente -Selic, IPCA, Dollar"
     columns:
       - name: mes_ref
         description: "Mes de referencia do indicador"

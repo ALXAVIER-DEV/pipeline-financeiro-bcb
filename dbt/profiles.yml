@@ -1,0 +1,15 @@
+pipeline_financeiro_bcb:
+  target: local
+  outputs:
+    local:
+      type: spark
+      method: thrift
+      host: spark-thrift
+      port: 10000
+      user: spark      
+      schema: gold
+      threads: 2
+      connect_retries: 5
+      connect_timeout: 30
+      server_side_parameters:
+        spark.sql.session.timeZone: UTC

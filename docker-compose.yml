@@ -32,6 +32,7 @@ services:
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key silver/ || true;
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key gold/ || true;
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/ || true;
+      awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/default/ || true;
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/bronze/ || true;
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/silver/ || true;
       awslocal --endpoint-url http://localstack:4566 s3api put-object --bucket financial-lakehouse --key warehouse/gold/ || true;
@@ -132,5 +133,174 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  dagster:
+    image: pipeline-financeiro-bcb:spark-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - dagster
+      - dev
+      - -f
+      - src/orchestration/pipeline.py
+      - -h
+      - 0.0.0.0
+      - -p
+      - "3000"
+    environment:
+      DAGSTER_HOME: /app/data/dagster
+
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      S3_BUCKET: financial-lakehouse
+      SPARK_WAREHOUSE: s3a://financial-lakehouse/warehouse
+
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_DRIVER_HOST: dagster
+      SPARK_DRIVER_BIND_ADDRESS: 0.0.0.0
+      SPARK_DRIVER_PORT: "40440"
+      SPARK_BLOCK_MANAGER_PORT: "40441"
+    ports:
+      - "3000:3000"
+    volumes:
+      - dagster_data:/app/data/dagster
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket; socket.create_connection(('localhost', 3000), 5).close()"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  spark-thrift:
+    image: pipeline-financeiro-bcb:spark-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - /bin/bash
+      - -c
+      - >
+        exec "$$SPARK_HOME/bin/spark-submit"
+        --class org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
+        --master spark://spark-master:7077
+        --conf spark.cores.max=1
+        --conf spark.executor.cores=1
+        --conf spark.driver.host=spark-thrift
+        --conf spark.driver.bindAddress=0.0.0.0
+        --conf spark.driver.port=40442
+        --conf spark.blockManager.port=40443
+        --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+        --conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog
+        --conf spark.sql.defaultCatalog=local
+        --conf spark.sql.catalog.local.type=hadoop
+        --conf spark.sql.catalog.local.warehouse=s3a://financial-lakehouse/warehouse
+        --conf spark.hadoop.fs.s3a.endpoint=http://localstack:4566
+        --conf spark.hadoop.fs.s3a.access.key=test
+        --conf spark.hadoop.fs.s3a.secret.key=test
+        --conf spark.hadoop.fs.s3a.endpoint.region=us-east-1
+        --conf spark.hadoop.fs.s3a.path.style.access=true
+        --conf spark.hadoop.fs.s3a.connection.ssl.enabled=false
+        --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+        --conf spark.sql.session.timeZone=UTC
+        "$$SPARK_HOME"/jars/spark-hive-thriftserver_2.12-*.jar
+    environment:
+      SPARK_NO_DAEMONIZE: "1"
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    ports:
+      - "10000:10000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket; socket.create_connection(('localhost', 10000), 5).close()"
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+
+  dbt:
+    image: pipeline-financeiro-bcb:spark-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app/dbt
+    entrypoint:
+      - dbt
+    command:
+      - --help
+    depends_on:
+      spark-thrift:
+        condition: service_healthy
+    restart: "no"
+
+  dashboard:
+    image: pipeline-financeiro-bcb:spark-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - streamlit
+      - run
+      - src/dashboard/app.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --server.headless=true
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      S3_BUCKET: financial-lakehouse
+      SPARK_WAREHOUSE: s3a://financial-lakehouse/warehouse
+
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_DRIVER_HOST: dashboard
+      SPARK_DRIVER_BIND_ADDRESS: 0.0.0.0
+      SPARK_DRIVER_PORT: "40444"
+      SPARK_BLOCK_MANAGER_PORT: "40445"
+    ports:
+      - "8501:8501"
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=5)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
 volumes:
   localstack_data:
+  dagster_data:

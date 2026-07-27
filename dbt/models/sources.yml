@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: silver
+    description: Tabelas tratadas da camada Silver no catálogo Iceberg local.    
+    schema: silver
+    tables:
+      - name: selic
+        description: Série histórica da taxa Selic.
+      - name: ipca
+        description: Série histórica do IPCA.
+      - name: dollar
+        description: Série histórica da cotação do dólar.

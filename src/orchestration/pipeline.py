@@ -80,11 +80,21 @@ def silver_selic(context: AssetExecutionContext):
     """
     Asset que representa a camada Silver para a série Selic.
     """
-    from src.transformation.silver_processor import process_silver_selic
-    from src.utils.spark_session import get_spark
-    spark = get_spark()
-    process_silver_selic(spark)
+    from src.transformation.processors.selic_processor import SelicProcessor
+
+    SelicProcessor().run()
     context.log.info("Processamento da camada Silver para a série Selic concluído.")
+
+
+@asset(group_name="silver", deps=[bronze_ipca])
+def silver_ipca(context: AssetExecutionContext):
+    """Transforma o IPCA da camada Bronze para a Silver."""
+    from src.transformation.processors.ipca_processor import IpcaProcessor
+
+    IpcaProcessor().run()
+    context.log.info(
+        "Processamento da camada Silver para a serie IPCA concluido."
+    )
 
 
 @asset(group_name="silver", deps=[bronze_dollar])
@@ -105,6 +115,7 @@ financial_job = define_asset_job(
         "bronze_ipca",
         "bronze_dollar",
         "silver_selic",
+        "silver_ipca",
         "silver_dollar",
     ],
 )
@@ -118,6 +129,7 @@ defs = Definitions(
         bronze_ipca,
         bronze_dollar,
         silver_selic,
+        silver_ipca,
         silver_dollar,
     ],
     jobs=[financial_job],

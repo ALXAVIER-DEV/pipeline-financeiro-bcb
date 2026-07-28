@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 from pyspark.errors import AnalysisException
@@ -17,7 +19,7 @@ def load_data() -> pd.DataFrame:
         spark.stop()
 
 
-def format_metric(value: object, prefix: str = "", suffix: str = "") -> str:
+def format_metric(value: Any, prefix: str = "", suffix: str = "") -> str:
     if pd.isna(value):
         return "Sem dados"
     return f"{prefix}{float(value):.2f}{suffix}"

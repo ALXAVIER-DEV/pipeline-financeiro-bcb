@@ -15,6 +15,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         default-jre-headless \
+        git \
         procps \
     && python -m venv "${VIRTUAL_ENV}" \
     && groupadd --system spark \
@@ -66,6 +67,7 @@ RUN cp /tmp/iceberg-spark-runtime.jar "${SPARK_HOME}/jars/" \
         /app/data/tmp/spark \
         /app/data/tmp/hadoop \
         /app/data/tmp/s3a \
+        /app/data/dagster \
     && chown -R spark:spark /app /opt/venv
 
 USER spark

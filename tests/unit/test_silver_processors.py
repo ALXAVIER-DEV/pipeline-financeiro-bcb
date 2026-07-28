@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import MagicMock, patch
 
 from pyspark.sql import DataFrame
@@ -6,6 +6,9 @@ from pyspark.sql import DataFrame
 from src.transformation.base_processor import BaseProcessor
 from src.transformation.processors.dollar_processor import DollarProcessor
 from src.transformation.processors.ipca_processor import IpcaProcessor
+from src.transformation.processors.monthly_indicator_processor import (
+    PibProcessor,
+)
 from src.transformation.processors.selic_processor import SelicProcessor
 
 
@@ -90,6 +93,19 @@ def test_dollar_processor_calcula_tendencia(spark):
     assert rows[1].variacao_pct == 2.0
 
 
+def test_monthly_indicator_mantem_data_e_valor(spark):
+    source = spark.createDataFrame(
+        [(date(2024, 1, 1), 100.0, "metadado")],
+        ["data", "valor", "_source"],
+    )
+    processor = PibProcessor.__new__(PibProcessor)
+
+    result = processor._transform(source)
+
+    assert result.columns == ["data", "valor"]
+    assert result.first().valor == 100.0
+
+
 class _TestProcessor(BaseProcessor):
     def __init__(self, bronze: MagicMock, silver: MagicMock):
         self.serie_name = "test"
@@ -108,6 +124,14 @@ class _TestProcessor(BaseProcessor):
         self.created = True
 
 
+class _ReadProcessor(BaseProcessor):
+    def _transform(self, df):
+        return df
+
+    def _create_table(self):
+        pass
+
+
 def test_base_processor_run_orquestra_as_etapas():
     bronze = MagicMock()
     silver = MagicMock()
@@ -121,3 +145,25 @@ def test_base_processor_run_orquestra_as_etapas():
     assert result is silver
     assert processor.created is True
     write.assert_called_once_with(silver)
+
+
+def test_read_bronze_mantem_ingestao_mais_recente_por_data(spark):
+    source = spark.createDataFrame(
+        [
+            (date(2024, 1, 1), 10.0, datetime(2024, 1, 2, 10)),
+            (date(2024, 1, 1), 11.0, datetime(2024, 1, 2, 11)),
+            (date(2024, 1, 2), 12.0, datetime(2024, 1, 2, 11)),
+        ],
+        ["data", "valor", "_ingested_at"],
+    )
+    processor = _ReadProcessor.__new__(_ReadProcessor)
+    processor.serie_name = "selic"
+    processor.spark = MagicMock()
+    processor.spark.table.return_value = source
+
+    rows = processor._read_bronze().orderBy("data").collect()
+
+    assert [(row.data, row.valor) for row in rows] == [
+        (date(2024, 1, 1), 11.0),
+        (date(2024, 1, 2), 12.0),
+    ]

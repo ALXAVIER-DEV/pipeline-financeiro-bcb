@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 
 from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import col, row_number
+from pyspark.sql.window import Window
 
 from src.utils.spark_session import get_spark
 
@@ -25,7 +27,15 @@ class BaseProcessor(ABC):
         return df_silver
 
     def _read_bronze(self) -> DataFrame:
-        return self.spark.table(f"local.bronze.{self.serie_name}")
+        df = self.spark.table(f"local.bronze.{self.serie_name}")
+        latest_ingestion = Window.partitionBy("data").orderBy(
+            col("_ingested_at").desc()
+        )
+        return (
+            df.withColumn("_ingestion_rank", row_number().over(latest_ingestion))
+            .filter(col("_ingestion_rank") == 1)
+            .drop("_ingestion_rank")
+        )
 
     @abstractmethod
     def _transform(self, df: DataFrame) -> DataFrame:

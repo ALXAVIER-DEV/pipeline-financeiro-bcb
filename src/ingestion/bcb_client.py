@@ -14,7 +14,13 @@ SERIES = {
     "inadimplencia": 21082
 }
 
-def fetch_bcb_data(codigo: int, data_ini: str, data_fim: str) -> pd.DataFrame:
+def fetch_bcb_data(
+    codigo: int,
+    data_ini: str,
+    data_fim: str,
+    *,
+    raise_on_error: bool = False,
+) -> pd.DataFrame:
     """
     Busca dados da API do BCB para um código de série e um intervalo de datas.
 
@@ -34,7 +40,7 @@ def fetch_bcb_data(codigo: int, data_ini: str, data_fim: str) -> pd.DataFrame:
     }
     
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
         
@@ -53,4 +59,6 @@ def fetch_bcb_data(codigo: int, data_ini: str, data_fim: str) -> pd.DataFrame:
         return df
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching data from BCB API: {e}")
+        if raise_on_error:
+            raise
         return pd.DataFrame()

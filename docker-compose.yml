@@ -149,6 +149,7 @@ services:
       - "3000"
     environment:
       DAGSTER_HOME: /app/data/dagster
+      PYTHONUNBUFFERED: "1"
 
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
@@ -166,12 +167,15 @@ services:
       - "3000:3000"
     volumes:
       - dagster_data:/app/data/dagster
+      - ./conf/dagster.yaml:/app/data/dagster/dagster.yaml:ro
     depends_on:
       spark-master:
         condition: service_healthy
       spark-worker:
         condition: service_healthy
       localstack:
+        condition: service_healthy
+      spark-thrift:
         condition: service_healthy
     healthcheck:
       test:

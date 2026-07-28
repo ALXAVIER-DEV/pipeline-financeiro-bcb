@@ -1,5 +1,8 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+import requests
+
 from src.ingestion.bcb_client import fetch_bcb_data
 
 
@@ -26,3 +29,17 @@ def test_fetch_bcb_data_trata_valor_invalido():
         df = fetch_bcb_data(11, "01/01/2024", "01/01/2024")
 
     assert df["valor"].isna().all()
+
+
+def test_fetch_bcb_data_propaga_erro_quando_solicitado():
+    with patch(
+        "requests.get",
+        side_effect=requests.ConnectionError("API indisponível"),
+    ):
+        with pytest.raises(requests.ConnectionError):
+            fetch_bcb_data(
+                11,
+                "01/01/2024",
+                "02/01/2024",
+                raise_on_error=True,
+            )

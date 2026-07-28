@@ -6,6 +6,9 @@ from pyspark.sql import DataFrame
 from src.transformation.base_processor import BaseProcessor
 from src.transformation.processors.dollar_processor import DollarProcessor
 from src.transformation.processors.ipca_processor import IpcaProcessor
+from src.transformation.processors.monthly_indicator_processor import (
+    PibProcessor,
+)
 from src.transformation.processors.selic_processor import SelicProcessor
 
 
@@ -88,6 +91,19 @@ def test_dollar_processor_calcula_tendencia(spark):
     assert rows[1].tendencia == "alta"
     assert rows[2].tendencia == "queda"
     assert rows[1].variacao_pct == 2.0
+
+
+def test_monthly_indicator_mantem_data_e_valor(spark):
+    source = spark.createDataFrame(
+        [(date(2024, 1, 1), 100.0, "metadado")],
+        ["data", "valor", "_source"],
+    )
+    processor = PibProcessor.__new__(PibProcessor)
+
+    result = processor._transform(source)
+
+    assert result.columns == ["data", "valor"]
+    assert result.first().valor == 100.0
 
 
 class _TestProcessor(BaseProcessor):

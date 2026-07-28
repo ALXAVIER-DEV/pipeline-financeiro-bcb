@@ -401,10 +401,10 @@ Depois do restart, o histórico das execuções deve continuar disponível em
 ### Critério de conclusão do item 5
 
 - serviço `dagster` saudável;
-- seis assets visíveis;
+- onze assets visíveis;
 - job `financial_pipeline` concluído;
 - jobs Spark recebidos pelo Worker;
-- tabelas Bronze e Silver atualizadas;
+- tabelas Bronze, Silver e Gold atualizadas;
 - histórico preservado após reiniciar o serviço.
 
 ## Item 6 — dbt e camada Gold
@@ -478,6 +478,39 @@ Validação executada:
 - aplicação executada sem exceções pelo framework de testes do Streamlit;
 - métricas de Selic, IPCA e dólar renderizadas com dados da tabela Gold;
 - sessão Spark encerrada após a carga para liberar recursos do Worker.
+
+## Item 7.1 — Orquestração completa no Dagster
+
+Status: concluído.
+
+1. [x] consumir Selic, IPCA, dólar, PIB e inadimplência da API do BCB;
+2. [x] materializar os cinco assets Bronze;
+3. [x] materializar os cinco assets Silver;
+4. [x] executar `dbt run` para materializar a Gold;
+5. [x] executar `dbt test` como etapa do asset Gold;
+6. [x] encadear as dependências API → Bronze → Silver → Gold;
+7. [x] liberar a sessão Spark entre os assets;
+8. [x] retransmitir a saída do dbt para os logs do Dagster;
+9. [x] padronizar os logs da aplicação no stdout;
+10. [x] executar o job com executor sequencial para evitar disputa de portas.
+
+Validação executada:
+
+- job `financial_pipeline` concluído com `RUN_SUCCESS`;
+- onze assets definidos: cinco Bronze, cinco Silver e um Gold;
+- PIB e inadimplência validados com 12 e 11 registros da API, respectivamente;
+- PIB e inadimplência materializados na Silver;
+- modelo `local.gold.indicadores_macroeconomicos` recriado;
+- Gold ampliada com `pib_valor_mes` e `inadimplencia_media_mes`;
+- `dbt test` aprovado com três testes;
+- logs de ingestão, Spark e dbt disponíveis no stdout do Dagster.
+
+Janela padrão de ingestão:
+
+- últimos 365 dias para todas as séries;
+- cerca de 252 registros para as séries diárias Selic e dólar;
+- cerca de 12 registros para as séries mensais IPCA, PIB e inadimplência;
+- a quantidade exata pode variar conforme dias úteis e disponibilidade no BCB.
 
 ## Item 8 — CI e testes end-to-end
 

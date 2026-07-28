@@ -1,7 +1,7 @@
 version: 2
 models:
   - name: indicadores_macroeconomicos
-    description: "Indicadores macro consolidados mensalmente -Selic, IPCA, Dollar"
+    description: "Indicadores macro mensais: Selic, IPCA, dólar, PIB e inadimplência"
     columns:
       - name: mes_ref
         description: "Mes de referencia do indicador"
@@ -13,4 +13,9 @@ models:
         description: "Media da taxa Selic no mes de referencia"
         tests:
           - not_null
-     
+
+      - name: pib_valor_mes
+        description: "Valor mensal do PIB disponibilizado pelo BCB"
+
+      - name: inadimplencia_media_mes
+        description: "Taxa média mensal de inadimplência"

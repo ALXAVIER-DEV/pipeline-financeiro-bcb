@@ -46,6 +46,16 @@ def render_dashboard(df: pd.DataFrame) -> None:
         format_metric(latest["dollar_medio_mes"], prefix="R$ "),
     )
 
+    col4, col5 = st.columns(2)
+    col4.metric(
+        "PIB",
+        format_metric(latest["pib_valor_mes"]),
+    )
+    col5.metric(
+        "Inadimplência",
+        format_metric(latest["inadimplencia_media_mes"], suffix="%"),
+    )
+
     st.caption(
         "Última referência disponível: "
         f"{pd.Timestamp(latest['mes_ref']):%m/%Y}"

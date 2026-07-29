@@ -20,7 +20,7 @@ Armazenamento: Apache Iceberg sobre S3 (LocalStack) via Spark
 |---|---|---|
 | **Bronze** | Spark + Iceberg | Ingestão bruta da API do BCB, append-only, particionado por ano, com metadados de auditoria (`_ingested_at`, `_source`, `_serie`) |
 | **Silver** | Spark + Iceberg | Limpeza, enriquecimento e cálculo de indicadores derivados (médias móveis, variações, classificações), sobrescrita idempotente por partição |
-| **Gold** | dbt (SQL) | Agregação mensal dos três indicadores em uma tabela única para consumo analítico |
+| **Gold** | dbt (SQL) | Agregação mensal dos cinco indicadores em uma tabela única para consumo analítico |
 | **Orquestração** | Dagster | Assets declarativos + job agendado (dias úteis, 08:00 UTC) |
 | **Visualização** | Streamlit | Dashboard com métricas atuais e evolução do juro real estimado |
 
@@ -29,10 +29,10 @@ Armazenamento: Apache Iceberg sobre S3 (LocalStack) via Spark
 | Série | Código SGS | Frequência | Status |
 |---|---|---|---|
 | Selic | 11 | Diária | ✅ Bronze → Silver → Gold |
-| IPCA | 433 | Mensal | ✅ Bronze → ⚠️ Silver não conectada ao Dagster ainda |
+| IPCA | 433 | Mensal | ✅ Bronze → Silver → Gold |
 | Dólar (USD/BRL) | 1 | Diária | ✅ Bronze → Silver → Gold |
-| PIB | 4380 | — | 🔜 Mapeada no client, ainda não ingerida |
-| Inadimplência | 21082 | — | 🔜 Mapeada no client, ainda não ingerida |
+| PIB | 4380 | Mensal | ✅ Bronze → Silver → Gold |
+| Inadimplência | 21082 | Mensal | ✅ Bronze → Silver → Gold |
 
 ---
 
@@ -255,13 +255,12 @@ CI configurado em [.github/workflows/ci.yml](.github/workflows/ci.yml): lint (ru
 
 ## ⚠️ Estado atual / roadmap
 
-Este é um projeto em evolução ativa — alguns pontos conhecidos, mantidos aqui de forma transparente:
+O pipeline completo API → Bronze → Silver → Gold está integrado ao Dagster para
+as cinco séries. As próximas evoluções são:
 
-- [ ] Asset `silver_ipca` ainda não está conectado ao pipeline do Dagster (apenas `selic` e `dollar` estão wired).
-- [ ] Projeto dbt está parcialmente configurado (falta `dbt_project.yml`/`profiles.yml`/`sources.yml`); o model `gold` existe mas ainda não roda de forma independente.
-- [ ] Divergência de nome entre a tabela Silver `dollar` e o source dbt `dolar` — a corrigir.
-- [ ] Séries de PIB e inadimplência mapeadas no client mas ainda não ingeridas.
-- [ ] Cobertura de testes crescendo — módulos de ingestão e transformação com testes unitários; suíte de integração planejada.
+- [x] criar testes end-to-end determinísticos do pipeline;
+- [ ] validar a construção e a saúde das imagens Docker no CI;
+- [ ] ampliar a cobertura de integração e observabilidade.
 
 ---
 
@@ -298,7 +297,7 @@ Storage: Apache Iceberg on S3 (LocalStack) via Spark
 |---|---|---|
 | **Bronze** | Spark + Iceberg | Raw ingestion from the BCB API, append-only, year-partitioned, with audit metadata (`_ingested_at`, `_source`, `_serie`) |
 | **Silver** | Spark + Iceberg | Cleaning, enrichment, and derived indicators (rolling averages, variations, classifications), idempotent partition-overwrite |
-| **Gold** | dbt (SQL) | Monthly aggregation of the three indicators into a single analytics-ready table |
+| **Gold** | dbt (SQL) | Monthly aggregation of all five indicators into a single analytics-ready table |
 | **Orchestration** | Dagster | Declarative software-defined assets + scheduled job (weekdays, 08:00 UTC) |
 | **Visualization** | Streamlit | Dashboard with current metrics and estimated real interest rate over time |
 
@@ -307,10 +306,10 @@ Storage: Apache Iceberg on S3 (LocalStack) via Spark
 | Series | SGS code | Frequency | Status |
 |---|---|---|---|
 | Selic (policy rate) | 11 | Daily | ✅ Bronze → Silver → Gold |
-| IPCA (inflation) | 433 | Monthly | ✅ Bronze → ⚠️ Silver not yet wired into Dagster |
+| IPCA (inflation) | 433 | Monthly | ✅ Bronze → Silver → Gold |
 | USD/BRL exchange rate | 1 | Daily | ✅ Bronze → Silver → Gold |
-| GDP | 4380 | — | 🔜 Mapped in the client, not yet ingested |
-| Credit default rate | 21082 | — | 🔜 Mapped in the client, not yet ingested |
+| GDP | 4380 | Monthly | ✅ Bronze → Silver → Gold |
+| Credit default rate | 21082 | Monthly | ✅ Bronze → Silver → Gold |
 
 ## Tech stack
 
@@ -430,13 +429,12 @@ CI configured in [.github/workflows/ci.yml](.github/workflows/ci.yml): lint (ruf
 
 ## Current state / roadmap
 
-This project is under active development — known gaps, kept here transparently:
+The complete API → Bronze → Silver → Gold pipeline is wired into Dagster for
+all five series. The next improvements are:
 
-- [ ] `silver_ipca` asset not yet wired into the Dagster pipeline (only `selic` and `dollar` are connected).
-- [ ] dbt project is partially scaffolded (missing `dbt_project.yml`/`profiles.yml`/`sources.yml`); the `gold` model exists but doesn't run standalone yet.
-- [ ] Naming mismatch between the Silver table `dollar` and the dbt source `dolar` — to be fixed.
-- [ ] GDP and credit-default series mapped in the client but not yet ingested.
-- [ ] Test coverage growing — ingestion and transformation modules have unit tests; integration suite planned.
+- [x] add deterministic end-to-end pipeline tests;
+- [ ] validate Docker image builds and service health in CI;
+- [ ] expand integration-test coverage and observability.
 
 ## About the data source
 

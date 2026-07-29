@@ -8,13 +8,13 @@ local e reproduzível com Docker, sem dependência de provedor de nuvem.
 - [x] Criar imagem compartilhada com Python, Spark, aplicação e JARs.
 - [x] Usar a imagem compartilhada no Spark Master e Worker.
 - [x] Conectar a aplicação ao cluster Spark.
-- [ ] Executar o pipeline completo dentro do Docker.
+- [x] Executar o pipeline completo dentro do Docker.
 - [x] Executar Dagster dentro do Docker.
 - [x] Completar a camada Gold com dbt.
 - [x] Executar Streamlit dentro do Docker.
-- [ ] Criar testes end-to-end.
+- [x] Criar testes end-to-end.
 - [ ] Validar imagens e serviços no CI.
-- [ ] Finalizar a documentação de execução local.
+- [x] Finalizar a documentação de execução local.
 
 ## Item 1 — Imagem compartilhada
 
@@ -514,14 +514,32 @@ Janela padrão de ingestão:
 
 ## Item 8 — CI e testes end-to-end
 
-1. validar Ruff e mypy;
-2. executar pytest com cobertura;
-3. validar `docker compose config`;
-4. construir a imagem;
-5. subir a infraestrutura;
-6. executar um smoke test;
-7. mostrar logs em caso de falha;
-8. encerrar os serviços com `docker compose down`.
+Status: implementado; aguardando a primeira execução no GitHub Actions.
+
+1. [x] validar Ruff e mypy;
+2. [x] executar pytest com cobertura;
+3. [x] validar `docker compose config`;
+4. [x] construir uma vez a imagem compartilhada;
+5. [x] subir a infraestrutura e aguardar os healthchecks;
+6. [x] executar smoke test Spark/Iceberg;
+7. [x] executar E2E determinístico Bronze → Silver → Gold;
+8. [x] executar `dbt run` e `dbt test`;
+9. [x] mostrar logs em caso de falha;
+10. [x] encerrar os serviços e remover volumes efêmeros.
+
+O E2E usa fixtures sintéticas para não depender da disponibilidade da API do
+BCB no CI. Ele percorre as escritas Iceberg Bronze, os cinco processadores
+Silver, o modelo dbt Gold e valida os indicadores consolidados.
+
+Validação local executada:
+
+- imagem compartilhada construída com sucesso;
+- Spark Master, Worker, Thrift, pipeline, Dagster e dashboard saudáveis;
+- smoke test conectado a `spark://spark-master:7077`;
+- cinco tabelas Bronze e cinco tabelas Silver materializadas;
+- `dbt run` aprovado;
+- três testes dbt aprovados;
+- tabela Gold validada com dois meses de dados sintéticos.
 
 ## Definição de pronto
 

@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from pyspark.errors import AnalysisException
 
+from src.dashboard.metrics import format_reference, latest_metric
 from src.utils.spark_session import get_spark
 
 GOLD_TABLE = "local.gold.indicadores_macroeconomicos"
@@ -48,14 +49,20 @@ def render_dashboard(df: pd.DataFrame) -> None:
         format_metric(latest["dollar_medio_mes"], prefix="R$ "),
     )
 
+    pib_value, pib_reference = latest_metric(df, "pib_valor_mes")
+    inadimplencia_value, inadimplencia_reference = latest_metric(
+        df,
+        "inadimplencia_media_mes",
+    )
+
     col4, col5 = st.columns(2)
     col4.metric(
-        "PIB",
-        format_metric(latest["pib_valor_mes"]),
+        f"PIB — {format_reference(pib_reference)}",
+        format_metric(pib_value),
     )
     col5.metric(
-        "Inadimplência",
-        format_metric(latest["inadimplencia_media_mes"], suffix="%"),
+        f"Inadimplência — {format_reference(inadimplencia_reference)}",
+        format_metric(inadimplencia_value, suffix="%"),
     )
 
     st.caption(

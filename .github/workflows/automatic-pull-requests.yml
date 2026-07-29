@@ -1,0 +1,57 @@
+name: Automatic pull requests
+
+on:
+  push:
+    branches:
+      - "feature/**"
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  feature-to-develop:
+    if: startsWith(github.ref_name, 'feature/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open pull request to develop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ "$(gh pr list \
+            --head "$HEAD_BRANCH" \
+            --base develop \
+            --state open \
+            --json number \
+            --jq 'length')" -eq 0 ]; then
+            gh pr create \
+              --head "$HEAD_BRANCH" \
+              --base develop \
+              --title "feat: merge $HEAD_BRANCH into develop" \
+              --body "PR criada automaticamente após push em \`$HEAD_BRANCH\`."
+          fi
+
+  develop-to-main:
+    if: github.ref_name == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open pull request to main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ "$(gh pr list \
+            --head develop \
+            --base main \
+            --state open \
+            --json number \
+            --jq 'length')" -eq 0 ]; then
+            gh pr create \
+              --head develop \
+              --base main \
+              --title "release: promote develop to main" \
+              --body "PR de promoção criada automaticamente. Requer validação do CI e aprovação do tech lead."
+          fi

@@ -14,6 +14,17 @@ models:
         tests:
           - not_null
 
+      - name: selic_anualizada_mes
+        description: "Taxa Selic anualizada média no mês, em percentual"
+        tests:
+          - not_null
+
+      - name: ipca_12m
+        description: "IPCA acumulado em 12 meses, em percentual"
+
+      - name: juros_real_estimado
+        description: "Juro real anual estimado pela equação de Fisher"
+
       - name: pib_valor_mes
         description: "Valor mensal do PIB disponibilizado pelo BCB"
 

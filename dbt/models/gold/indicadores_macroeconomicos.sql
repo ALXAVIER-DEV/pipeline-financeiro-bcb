@@ -5,14 +5,16 @@ WITH selic_mensal AS (
         TRUNC(data, 'MONTH') AS mes_ref,
         AVG(valor)              AS selic_media_mes,
         MAX(valor)              AS selic_max_mes,
-        MIN(valor)              AS selic_min_mes
+        MIN(valor)              AS selic_min_mes,
+        AVG(taxa_anualizada) * 100 AS selic_anualizada_mes
     FROM {{ source('silver', 'selic') }}
     GROUP BY 1
 ),
 ipca_mensal AS (
     SELECT
         TRUNC(data, 'MONTH') AS mes_ref,
-        SUM(valor)              AS ipca_acumulado_mes
+        SUM(valor)              AS ipca_acumulado_mes,
+        MAX(acumulado_12m)      AS ipca_12m
     FROM {{ source('silver', 'ipca') }}
     GROUP BY 1
 ),
@@ -45,12 +47,21 @@ SELECT
     s.selic_media_mes,
     s.selic_max_mes,
     s.selic_min_mes,
+    s.selic_anualizada_mes,
     i.ipca_acumulado_mes,
+    i.ipca_12m,
     d.dollar_medio_mes,
     d.dollar_max_mes,
     p.pib_valor_mes,
     n.inadimplencia_media_mes,
-    ROUND(s.selic_media_mes - COALESCE(i.ipca_acumulado_mes, 0), 4) as juros_real_estimado
+    ROUND(
+        (
+            (1 + s.selic_anualizada_mes / 100)
+            / (1 + i.ipca_12m / 100)
+            - 1
+        ) * 100,
+        4
+    ) AS juros_real_estimado
 FROM selic_mensal s
 LEFT JOIN ipca_mensal i ON s.mes_ref = i.mes_ref
 LEFT JOIN dollar_mensal d ON s.mes_ref = d.mes_ref

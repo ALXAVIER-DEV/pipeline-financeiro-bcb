@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     print("\n=== Resultado ===")
     for serie, info in resultado.items():
-        status = "✓" if info["status"] in ("ok", "sem_dados") else "✗"
+        status = "OK" if info["status"] in ("ok", "sem_dados") else "ERRO"
         print(f"{status} {serie}: {info}")
 
     if any(info["status"] == "erro" for info in resultado.values()):

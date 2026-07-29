@@ -13,7 +13,7 @@ local e reproduzível com Docker, sem dependência de provedor de nuvem.
 - [x] Completar a camada Gold com dbt.
 - [x] Executar Streamlit dentro do Docker.
 - [x] Criar testes end-to-end.
-- [ ] Validar imagens e serviços no CI.
+- [x] Validar imagens e serviços no CI.
 - [x] Finalizar a documentação de execução local.
 
 ## Item 1 — Imagem compartilhada
@@ -514,7 +514,7 @@ Janela padrão de ingestão:
 
 ## Item 8 — CI e testes end-to-end
 
-Status: implementado; aguardando a primeira execução no GitHub Actions.
+Status: concluído.
 
 1. [x] validar Ruff e mypy;
 2. [x] executar pytest com cobertura;
@@ -540,6 +540,13 @@ Validação local executada:
 - `dbt run` aprovado;
 - três testes dbt aprovados;
 - tabela Gold validada com dois meses de dados sintéticos.
+
+Validação no GitHub Actions:
+
+- job `lint-and-test` aprovado;
+- job `docker-e2e` aprovado;
+- build da imagem e healthchecks executados no runner do GitHub;
+- E2E Bronze → Silver → Gold concluído com sucesso no CI.
 
 ## Definição de pronto
 

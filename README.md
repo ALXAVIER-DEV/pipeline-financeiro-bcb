@@ -4,9 +4,62 @@
 
 Projeto pessoal de portfólio em engenharia de dados — construído para demonstrar um pipeline batch de ponta a ponta com ferramentas do mundo real (não apenas notebooks).
 
+[![CI](https://github.com/ALXAVIER-DEV/pipeline-financeiro-bcb/actions/workflows/ci.yml/badge.svg)](https://github.com/ALXAVIER-DEV/pipeline-financeiro-bcb/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Apache Spark](https://img.shields.io/badge/Apache%20Spark-3.5-E25A1C?logo=apachespark&logoColor=white)](https://spark.apache.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+
 ---
 
+## 🎯 Visão de portfólio
+
+Este projeto resolve um cenário realista de Engenharia de Dados: coletar séries
+econômicas de uma API pública, preservar o histórico bruto, aplicar regras de
+qualidade e enriquecimento, produzir uma camada analítica e disponibilizar os
+resultados em um dashboard.
+
+### O que o projeto demonstra
+
+- construção de um pipeline batch completo, da fonte ao consumo;
+- arquitetura Medallion com cinco tabelas Bronze, cinco Silver e uma Gold;
+- processamento distribuído em cluster Spark;
+- tabelas ACID e catálogo lakehouse com Apache Iceberg;
+- orquestração declarativa de 11 assets no Dagster;
+- modelagem analítica e testes de dados com dbt;
+- infraestrutura local reproduzível com Docker Compose;
+- qualidade automatizada com Ruff, mypy, pytest e testes end-to-end;
+- integração contínua com build da imagem, healthchecks e E2E no GitHub Actions.
+
+### Resultados verificáveis
+
+| Resultado | Evidência |
+|---|---|
+| 5 séries econômicas integradas | Selic, IPCA, dólar, PIB e inadimplência |
+| 11 assets orquestrados | 5 Bronze + 5 Silver + 1 Gold |
+| Pipeline reproduzível | Imagem compartilhada e 9 serviços Docker Compose |
+| Qualidade de código | Ruff, mypy e 15 testes unitários |
+| Qualidade de dados | 3 testes dbt na camada Gold |
+| Validação operacional | Smoke test Spark/Iceberg e E2E Bronze → Silver → Gold |
+| Entrega contínua | Fluxo automatizado `feature/** → develop → main` |
+
+### Decisões técnicas
+
+- **Iceberg em vez de Parquet isolado:** adiciona transações ACID, evolução de
+  schema, particionamento e gerenciamento de tabelas.
+- **LocalStack em vez de uma conta cloud:** reproduz a integração com S3 sem
+  custo ou dependência de infraestrutura externa.
+- **Dagster orientado a assets:** torna explícitas as dependências e a
+  observabilidade entre Bronze, Silver e Gold.
+- **dbt na Gold:** separa a modelagem analítica SQL do processamento de dados
+  realizado pelo Spark.
+- **E2E com dados sintéticos:** valida o caminho real do pipeline no CI sem
+  tornar os testes dependentes da disponibilidade momentânea da API do BCB.
+
 ## 🗺️ Arquitetura
+
+![Arquitetura do Pipeline Financeiro BCB](docs/architecture/pipeline-financeiro-bcb.png)
+
+[Abrir diagrama editável no Draw.io](docs/architecture/pipeline-financeiro-bcb.drawio)
 
 ```
 BCB SGS API  ──►  Bronze (Iceberg, append-only)  ──►  Silver (Iceberg, overwrite por partição)  ──►  Gold (dbt)  ──►  Dashboard (Streamlit)
@@ -259,7 +312,7 @@ O pipeline completo API → Bronze → Silver → Gold está integrado ao Dagste
 as cinco séries. As próximas evoluções são:
 
 - [x] criar testes end-to-end determinísticos do pipeline;
-- [ ] validar a construção e a saúde das imagens Docker no CI;
+- [x] validar a construção e a saúde das imagens Docker no CI;
 - [ ] ampliar a cobertura de integração e observabilidade.
 
 ---
@@ -433,7 +486,7 @@ The complete API → Bronze → Silver → Gold pipeline is wired into Dagster f
 all five series. The next improvements are:
 
 - [x] add deterministic end-to-end pipeline tests;
-- [ ] validate Docker image builds and service health in CI;
+- [x] validate Docker image builds and service health in CI;
 - [ ] expand integration-test coverage and observability.
 
 ## About the data source
